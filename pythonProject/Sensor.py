@@ -9,23 +9,37 @@ class Sensor:
         self.unit = unit
         self.min_value = min_value
         self.max_value = max_value
-        self.frequency = frequency  # Częstotliwość odczytów w sekundach
+        self.frequency = frequency
         self.active = True
         self.last_value = None
-        self.last_read_time = time.time()  # Czas ostatniego odczytu
+        self.last_read_time = time.time()
+        self._callbacks = []
+
+    def register_callback(self, callback):
+        self._callbacks.append(callback)
 
     def read_value(self):
         if not self.active:
             raise Exception(f"Czujnik {self.name} jest wyłączony.")
 
-        # Sprawdzenie, czy minęła odpowiednia ilość czasu od ostatniego odczytu
         current_time = time.time()
         if current_time - self.last_read_time < self.frequency:
-            return self.last_value  # Zwróć ostatnią wartość, jeśli jeszcze nie minął czas
+            return self.last_value
 
         value = random.uniform(self.min_value, self.max_value)
         self.last_value = value
-        self.last_read_time = current_time  # Aktualizujemy czas ostatniego odczytu
+        self.last_read_time = current_time
+
+        # Wywołanie zarejestrowanych callbacków
+        from datetime import datetime
+        for callback in self._callbacks:
+            callback(
+                sensor_id=self.sensor_id,
+                timestamp=datetime.now(),
+                value=self.last_value,
+                unit=self.unit
+            )
+
         return value
 
     def calibrate(self, calibration_factor):

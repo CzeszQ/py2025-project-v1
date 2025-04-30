@@ -1,3 +1,9 @@
+import math
+from datetime import datetime
+from random import random
+from Sensor import Sensor
+
+
 class PressureSensor(Sensor):
     def __init__(self, sensor_id, name, min_value=950, max_value=1050, frequency=1):
         super().__init__(sensor_id, name, "hPa", min_value, max_value, frequency)

@@ -2,6 +2,7 @@ import random
 import math
 from datetime import datetime
 from Sensor import Sensor
+from TemperatureSensor import TemperatureSensor
 
 
 class HumiditySensor(Sensor):
