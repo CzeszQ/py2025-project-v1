@@ -11,6 +11,7 @@ class Logger:
         with open(config_path, 'r') as f:
             config = json.load(f)
 
+        self._validate_config(config)
         self.log_dir = config['log_dir']
         self.archive_dir = os.path.join(self.log_dir, 'archive')
         self.filename_pattern = config['filename_pattern']
@@ -126,17 +127,39 @@ class Logger:
 
     def _read_csv(self, file_obj, start, end, sensor_id, from_zip=False):
         import io
-        f = file_obj if from_zip else open(file_obj, newline='', encoding='utf-8')
-        reader = csv.DictReader(io.TextIOWrapper(f) if from_zip else f)
-        for row in reader:
-            row_time = datetime.fromisoformat(row['timestamp'])
-            if start <= row_time <= end:
-                if sensor_id is None or row['sensor_id'] == sensor_id:
-                    yield {
-                        'timestamp': row_time,
-                        'sensor_id': row['sensor_id'],
-                        'value': float(row['value']),
-                        'unit': row['unit']
-                    }
-        if not from_zip:
-            f.close()
+        open_file = (
+            io.TextIOWrapper(file_obj) if from_zip
+            else open(file_obj, newline='', encoding='utf-8')
+        )
+
+        with open_file as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                row_time = datetime.fromisoformat(row['timestamp'])
+                if start <= row_time <= end:
+                    if sensor_id is None or row['sensor_id'] == sensor_id:
+                        yield {
+                            'timestamp': row_time,
+                            'sensor_id': row['sensor_id'],
+                            'value': float(row['value']),
+                            'unit': row['unit']
+                        }
+
+    def _validate_config(self, config):
+        required_fields = {
+            'log_dir': str,
+            'filename_pattern': str,
+            'buffer_size': int,
+            'rotate_every_hours': int,
+            'max_size_mb': (int, float),
+            'retention_days': int
+        }
+
+        for key, expected_type in required_fields.items():
+            if key not in config:
+                raise ValueError(f"Brak wymaganego pola w konfiguracji: {key}")
+            if not isinstance(config[key], expected_type):
+                raise TypeError(f"Pole '{key}' powinno być typu {expected_type}, a jest {type(config[key])}")
+
+        if 'rotate_after_lines' in config and not isinstance(config['rotate_after_lines'], int):
+            raise TypeError("Pole 'rotate_after_lines' (jeśli podane) musi być typu int.")
