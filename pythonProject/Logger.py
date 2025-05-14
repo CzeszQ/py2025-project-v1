@@ -125,6 +125,12 @@ class Logger:
                         with zipf.open(name) as f:
                             yield from self._read_csv(f, start, end, sensor_id, from_zip=True)
 
+    def log_info(self, message: str):
+        print(f"[INFO] {datetime.now().isoformat()} - {message}")
+
+    def log_error(self, message: str):
+        print(f"[ERROR] {datetime.now().isoformat()} - {message}")
+
     def _read_csv(self, file_obj, start, end, sensor_id, from_zip=False):
         import io
         open_file = (
