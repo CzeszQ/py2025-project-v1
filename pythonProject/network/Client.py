@@ -20,6 +20,7 @@ class Client:
         self.timeout = timeout
         self.retries = retries
         self.logger = logger
+        self.connection_failed = False  # Flaga informująca o niepowodzeniu połączenia
 
     def connect(self) -> None:
         """
@@ -34,6 +35,11 @@ class Client:
         :param data: Słownik danych do wysłania
         :return: True jeśli wysłano i odebrano ACK, False w przeciwnym razie
         """
+        if self.connection_failed:
+            if self.logger:
+                self.logger.log_error("Połączenie zostało przerwane po wyczerpaniu prób")
+            return False
+
         message = self._serialize(data) + b"\n"
 
         for attempt in range(1, self.retries + 1):
@@ -53,10 +59,26 @@ class Client:
                             self.logger.log_error(f"Nieprawidłowe potwierdzenie: {ack}")
             except Exception as e:
                 if self.logger:
-                    self.logger.log_error(f"Błąd wysyłania danych (próba {attempt}): {e}")
-                time.sleep(1)
+                    self.logger.log_error(f"Błąd wysyłania danych (próba {attempt}/{self.retries}): {e}")
+
+                if attempt < self.retries:
+                    time.sleep(1)
+                else:
+                    # Po wyczerpaniu wszystkich prób
+                    self.connection_failed = True
+                    if self.logger:
+                        self.logger.log_error(
+                            f"Wyczerpano wszystkie próby połączenia ({self.retries}). Przerywanie połączenia.")
 
         return False
+
+    def is_connection_failed(self) -> bool:
+        """
+        Sprawdza czy połączenie zostało przerwane po wyczerpaniu prób.
+
+        :return: True jeśli połączenie zostało przerwane, False w przeciwnym razie
+        """
+        return self.connection_failed
 
     def close(self) -> None:
         """
